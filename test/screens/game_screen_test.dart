@@ -22,6 +22,8 @@ void main() {
   ) async {
     await tester.pumpWidget(const ElegantXiangqiApp());
     await tester.pumpAndSettle();
+    await tester.tap(find.textContaining('双人对战'));
+    await tester.pumpAndSettle();
 
     expect(find.text('红方走棋'), findsOneWidget);
 
@@ -38,6 +40,8 @@ void main() {
     WidgetTester tester,
   ) async {
     await tester.pumpWidget(const ElegantXiangqiApp());
+    await tester.pumpAndSettle();
+    await tester.tap(find.textContaining('双人对战'));
     await tester.pumpAndSettle();
 
     // Select the red soldier, then tap a square it cannot reach.

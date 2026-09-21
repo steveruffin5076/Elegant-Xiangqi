@@ -3,7 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 
 import 'game/campaign_progress.dart';
-import 'screens/game_screen.dart';
+import 'screens/home_screen.dart';
 import 'theme/theme_controller.dart';
 
 Future<void> main() async {
@@ -39,7 +39,7 @@ class ElegantXiangqiApp extends StatelessWidget {
             ),
             scaffoldBackgroundColor: palette.scaffoldBackground,
           ),
-          home: const GameScreen(),
+          home: const HomeScreen(),
         );
       },
     );

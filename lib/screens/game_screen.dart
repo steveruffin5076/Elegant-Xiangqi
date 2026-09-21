@@ -87,6 +87,14 @@ class _GameScreenState extends State<GameScreen> {
   int _nextSplashId = 0;
   final Map<int, BoardPosition> activeSplashes = {};
 
+  /// Captured pieces still fading out at the square they were taken on —
+  /// see [BoardWidget.ghostPieces].
+  final Map<int, VisualPiece> fadingGhosts = {};
+
+  /// Id of the piece currently sliding to a new square, for the "lift"
+  /// shadow in [PieceWidget]. Cleared once the slide animation finishes.
+  int? movingPieceId;
+
   int? shakingPieceId;
   int shakeSeed = 0;
 
@@ -217,9 +225,15 @@ class _GameScreenState extends State<GameScreen> {
       shakingPieceId = null;
       hintFrom = null;
       hintTo = null;
+      movingPieceId = movingVisual.id;
 
       if (capturedVisual != null) {
         visualPieces.remove(capturedVisual);
+        fadingGhosts[capturedVisual.id] = VisualPiece(
+          id: capturedVisual.id,
+          piece: capturedVisual.piece,
+          position: move.to,
+        );
         activeSplashes[_nextSplashId++] = move.to;
         if (moverSide == Side.red) {
           capturedByRed.add(capturedPiece!);
@@ -239,11 +253,22 @@ class _GameScreenState extends State<GameScreen> {
       }
     });
 
+    Future<void>.delayed(const Duration(milliseconds: 220), () {
+      if (!mounted) return;
+      if (movingPieceId == movingVisual.id) {
+        setState(() => movingPieceId = null);
+      }
+    });
+
     if (board.isGameOver) {
       _handleCampaignGameOver(moverSide);
     } else {
       _maybeTriggerAiMove();
     }
+  }
+
+  void _onGhostFadeComplete(int id) {
+    setState(() => fadingGhosts.remove(id));
   }
 
   void _handleCampaignGameOver(Side moverSide) {
@@ -343,6 +368,8 @@ class _GameScreenState extends State<GameScreen> {
       hintFrom = null;
       hintTo = null;
       activeSplashes.clear();
+      fadingGhosts.clear();
+      movingPieceId = null;
     });
   }
 
@@ -403,6 +430,9 @@ class _GameScreenState extends State<GameScreen> {
                     onTapSquare: _onTapSquare,
                     hintFrom: hintFrom,
                     hintTo: hintTo,
+                    movingPieceId: movingPieceId,
+                    ghostPieces: fadingGhosts.values.toList(),
+                    onGhostFadeComplete: _onGhostFadeComplete,
                     palette: palette,
                   ),
                 ),

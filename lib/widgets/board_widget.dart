@@ -22,6 +22,16 @@ class BoardWidget extends StatelessWidget {
   final BoardPosition? hintTo;
   final Palette palette;
 
+  /// Id of the piece currently sliding to a new square, if any — it plays
+  /// the "lift" shadow while [pieces] carries its updated position.
+  final int? movingPieceId;
+
+  /// Captured pieces still fading out at the square they were taken on,
+  /// frozen in place (not part of [pieces], so they never intercept taps
+  /// or get mistaken for the piece that just moved onto their square).
+  final List<VisualPiece> ghostPieces;
+  final ValueChanged<int>? onGhostFadeComplete;
+
   const BoardWidget({
     super.key,
     required this.pieces,
@@ -36,6 +46,9 @@ class BoardWidget extends StatelessWidget {
     required this.palette,
     this.hintFrom,
     this.hintTo,
+    this.movingPieceId,
+    this.ghostPieces = const [],
+    this.onGhostFadeComplete,
   });
 
   @override
@@ -76,6 +89,30 @@ class BoardWidget extends StatelessWidget {
                     ),
                   ),
                 ),
+                for (final ghost in ghostPieces)
+                  Positioned(
+                    key: ValueKey('ghost-${ghost.id}'),
+                    left: ghost.position.col * cellWidth + cellWidth * 0.05,
+                    top: ghost.position.row * cellHeight + cellHeight * 0.05,
+                    width: cellWidth * 0.9,
+                    height: cellHeight * 0.9,
+                    child: IgnorePointer(
+                      child: TweenAnimationBuilder<double>(
+                        tween: Tween(begin: 1.0, end: 0.0),
+                        duration: const Duration(milliseconds: 220),
+                        curve: Curves.easeIn,
+                        onEnd: () => onGhostFadeComplete?.call(ghost.id),
+                        builder: (context, t, child) => Opacity(
+                          opacity: t,
+                          child: Transform.scale(
+                            scale: 0.5 + 0.5 * t,
+                            child: child,
+                          ),
+                        ),
+                        child: PieceWidget(piece: ghost.piece, palette: palette),
+                      ),
+                    ),
+                  ),
                 for (final visualPiece in pieces)
                   AnimatedPositioned(
                     key: ValueKey(visualPiece.id),
@@ -89,6 +126,7 @@ class BoardWidget extends StatelessWidget {
                       child: PieceWidget(
                         piece: visualPiece.piece,
                         selected: selected == visualPiece.position,
+                        lifted: movingPieceId == visualPiece.id,
                         shakeSeed: shakingPieceId == visualPiece.id
                             ? shakeSeed
                             : 0,
