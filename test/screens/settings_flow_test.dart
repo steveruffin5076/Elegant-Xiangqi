@@ -34,9 +34,6 @@ void main() {
   ) async {
     await tester.pumpWidget(const ElegantXiangqiApp());
     await tester.pumpAndSettle();
-
-    await tester.tap(find.text('菜单'));
-    await tester.pumpAndSettle();
     expect(find.byType(HomeScreen), findsOneWidget);
 
     await tester.tap(find.textContaining('主题'));

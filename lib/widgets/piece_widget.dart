@@ -11,6 +11,12 @@ class PieceWidget extends StatelessWidget {
   final bool selected;
   final Palette palette;
 
+  /// True while this piece is sliding to a new square — plays a "silk
+  /// shadow" lift (a little bigger, shadow cast further down) so the move
+  /// reads as picking the piece up and setting it back down, rather than
+  /// it just gliding flat across the board.
+  final bool lifted;
+
   /// Bumping this value plays a one-shot "invalid move" wiggle — used for
   /// a hobbled horse leg, an elephant blocked at the river, etc. A value
   /// of 0 means "not shaking".
@@ -21,6 +27,7 @@ class PieceWidget extends StatelessWidget {
     required this.piece,
     required this.palette,
     this.selected = false,
+    this.lifted = false,
     this.shakeSeed = 0,
   });
 
@@ -30,10 +37,16 @@ class PieceWidget extends StatelessWidget {
     final textColor = isRed ? palette.redPieceText : palette.blackPieceText;
 
     final pieceBody = AnimatedScale(
-      scale: selected ? 1.1 : 1.0,
+      scale: selected
+          ? 1.1
+          : lifted
+          ? 1.12
+          : 1.0,
       duration: const Duration(milliseconds: 220),
       curve: Curves.easeOutCubic,
-      child: Container(
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 220),
+        curve: Curves.easeOutCubic,
         decoration: BoxDecoration(
           shape: BoxShape.circle,
           gradient: RadialGradient(
@@ -51,6 +64,14 @@ class PieceWidget extends StatelessWidget {
                   BoxShadow(
                     color: palette.pieceRim.withValues(alpha: 0.6),
                     blurRadius: 12,
+                  ),
+                ]
+              : lifted
+              ? [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.35),
+                    blurRadius: 10,
+                    offset: const Offset(0, 5),
                   ),
                 ]
               : const [

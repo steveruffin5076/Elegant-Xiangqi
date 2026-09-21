@@ -43,6 +43,11 @@ dl.google.com is blocked by the egress proxy; needs a machine with SDK
 access. All 4 planned phases are now done; nothing left on the plan's
 own checklist except that Android build step.
 
+Post-launch polish (see progress.md): GitHub Pages deploy workflow
+live at https://steveruffin5076.github.io/Elegant-Xiangqi/, app now
+opens on the main menu (HomeScreen) instead of a game, and piece moves
+got a lift + capture fade-out animation polish.
+
 ## Commands
 - `flutter run -d chrome` for web
 - `flutter run -d android` for Android

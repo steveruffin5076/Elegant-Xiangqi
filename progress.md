@@ -258,6 +258,43 @@ environment's egress proxy) and what to do on a machine that has it.
       - `flutter analyze` clean, `flutter test` (42/42 pass),
         `flutter build web --release` succeeds
 
+## Post-launch polish (after Phase 4, PR #1 merged)
+
+- **GitHub Pages deployment** (PR #2, merged): added
+  `.github/workflows/deploy-pages.yml`, which builds
+  `flutter build web --release --base-href /Elegant-Xiangqi/` and
+  publishes it via `actions/deploy-pages` on every push to `main`.
+  Live URL: https://steveruffin5076.github.io/Elegant-Xiangqi/ — build
+  confirmed green on GitHub Actions. Requires the one-time repo setting
+  Settings → Pages → Source = "GitHub Actions" (can't be set from this
+  sandbox; needs a repo admin).
+- **Launch screen fix**: `lib/main.dart` was sending players straight
+  into a human-vs-human `GameScreen` on cold start instead of
+  `HomeScreen` (the actual main menu with vs-Human / vs-AI / Campaign /
+  Theme). Changed `home:` to `const HomeScreen()`. Updated the 5 widget
+  tests that assumed the old behavior (`widget_test.dart`,
+  `game_screen_test.dart`, `home_flow_test.dart`,
+  `settings_flow_test.dart`, `campaign_flow_test.dart`) to navigate via
+  the real menu instead of relying on the app opening directly into a
+  game.
+- **Smoother move animation**: pieces already slid between squares
+  (220ms `easeOutCubic`, unchanged), but a capture just vanished
+  instantly and a moving piece looked flat. Added:
+  - A "lift" while a piece is mid-slide (`PieceWidget.lifted`): scales
+    to 1.12x and casts a bigger, offset shadow, so the move reads as
+    picking the piece up and setting it down rather than gliding flat.
+    Tracked via `movingPieceId` in `_GameScreenState`, cleared 220ms
+    after the move via a `Future.delayed`.
+  - Captured pieces now fade + shrink out over 220ms at the square
+    they were taken on, instead of disappearing instantly. Implemented
+    as `BoardWidget.ghostPieces` — frozen `VisualPiece` snapshots kept
+    *outside* the interactive `visualPieces` list (so they can't be
+    mistaken for the piece that just captured them, and can't intercept
+    taps), cleared via an `onGhostFadeComplete` callback once the fade
+    finishes (same pattern as the existing ink-splash `activeSplashes`).
+- `flutter analyze` clean, `flutter test` (42/42 pass),
+  `flutter build web --release` succeeds.
+
 ## Notes
 
 - Update this file as phases complete; check off items and add dated notes
