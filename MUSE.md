@@ -33,9 +33,15 @@ Alternative if user prefers Web-first: React + PixiJS + Capacitor (but Flutter i
 5. **Pikafish Integration**: Use `go movetime X` for difficulty levels: 50,150,400,800,1500,3000,5000,8000 ms
 6. **Campaign Save**: Hive box `campaign_progress` with chapter, level, stars (1-3)
 7. **Performance**: 60fps on low-end Android, avoid heavy shaders. Use Canvas, not WebGL for board if possible.
+8. **Progress Tracking**: Always update `progress.md` with current status, what changed, and any important notes/deviations from plan — after finishing a phase or making a significant change, before ending the session.
 
 ## Current Phase
-Phase 0: Setup project structure + portrait board rendering + piece touch
+Phase 4 complete: sounds, 3 themes, app icon/splash, performance
+RepaintBoundaries, web release build all verified (see progress.md).
+Android APK cannot be built in this sandbox — no Android SDK and
+dl.google.com is blocked by the egress proxy; needs a machine with SDK
+access. All 4 planned phases are now done; nothing left on the plan's
+own checklist except that Android build step.
 
 ## Commands
 - `flutter run -d chrome` for web
