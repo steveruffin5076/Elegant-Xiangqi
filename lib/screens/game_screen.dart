@@ -2,11 +2,14 @@ import 'package:flutter/material.dart';
 
 import '../engine/pikafish.dart';
 import '../game/board.dart';
+import '../game/campaign_data.dart';
+import '../game/campaign_progress.dart';
 import '../game/difficulty.dart';
 import '../game/piece.dart';
 import '../game/rules.dart';
 import '../theme/colors.dart';
 import '../widgets/board_widget.dart';
+import '../widgets/campaign_result_dialog.dart';
 import '../widgets/captured_tray.dart';
 import '../widgets/control_bar.dart';
 import '../widgets/eval_bar.dart';
@@ -31,10 +34,16 @@ const _totalHints = 3;
 /// + 8% info + 10% controls. Bottom nav (6%) is hidden during a game.
 class GameScreen extends StatefulWidget {
   /// Null means human-vs-human; otherwise the human (Red) plays the AI
-  /// (Black) at this difficulty.
+  /// (Black) at this difficulty. Ignored when [campaignLevel] is set —
+  /// the level supplies its own opponent difficulty.
   final Difficulty? aiDifficulty;
 
-  const GameScreen({super.key, this.aiDifficulty});
+  /// When set, this is a campaign game: the board loads from the level's
+  /// FEN, the opponent plays at the level's difficulty, and a win/loss
+  /// records progress and shows [CampaignResultDialog].
+  final CampaignLevel? campaignLevel;
+
+  const GameScreen({super.key, this.aiDifficulty, this.campaignLevel});
 
   @override
   State<GameScreen> createState() => _GameScreenState();
@@ -62,7 +71,7 @@ class _GameScreenState extends State<GameScreen> {
   final Pikafish _engine = Pikafish();
   final List<_GameSnapshot> _history = [];
 
-  Board board = Board.initial();
+  late Board board;
   BoardPosition? selected;
   List<BoardPosition> legalDestinations = [];
   List<BoardPosition> blockedLegs = [];
@@ -80,12 +89,19 @@ class _GameScreenState extends State<GameScreen> {
 
   bool isAiThinking = false;
   int hintsRemaining = _totalHints;
+  int undosUsed = 0;
   BoardPosition? hintFrom;
   BoardPosition? hintTo;
+
+  Difficulty? get _aiDifficulty =>
+      widget.campaignLevel?.opponentDifficulty ?? widget.aiDifficulty;
 
   @override
   void initState() {
     super.initState();
+    board = widget.campaignLevel != null
+        ? Board.fromFen(widget.campaignLevel!.fen)
+        : Board.initial();
     visualPieces = [
       for (var r = 0; r < Board.rows; r++)
         for (var c = 0; c < Board.cols; c++)
@@ -98,8 +114,7 @@ class _GameScreenState extends State<GameScreen> {
     ];
   }
 
-  bool get _isAiTurn =>
-      widget.aiDifficulty != null && board.turn != humanSide;
+  bool get _isAiTurn => _aiDifficulty != null && board.turn != humanSide;
 
   VisualPiece _visualPieceAt(BoardPosition pos) =>
       visualPieces.firstWhere((p) => p.position == pos);
@@ -209,11 +224,49 @@ class _GameScreenState extends State<GameScreen> {
       }
     });
 
-    _maybeTriggerAiMove();
+    if (board.isGameOver) {
+      _handleCampaignGameOver(moverSide);
+    } else {
+      _maybeTriggerAiMove();
+    }
+  }
+
+  void _handleCampaignGameOver(Side moverSide) {
+    final level = widget.campaignLevel;
+    if (level == null) return;
+
+    final won = moverSide == humanSide;
+    final hintsUsed = _totalHints - hintsRemaining;
+    final stars = !won
+        ? 0
+        : (hintsUsed == 0 && undosUsed == 0)
+        ? 3
+        : (hintsUsed + undosUsed <= 2)
+        ? 2
+        : 1;
+
+    CampaignProgress.recordResult(
+      levelId: level.id,
+      overallIndex: level.overallIndex,
+      stars: stars,
+    );
+
+    showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => CampaignResultDialog(
+        won: won,
+        stars: stars,
+        onBackToMap: () {
+          Navigator.of(context).pop(); // close dialog
+          Navigator.of(context).pop(); // back to campaign map
+        },
+      ),
+    );
   }
 
   void _maybeTriggerAiMove() {
-    final difficulty = widget.aiDifficulty;
+    final difficulty = _aiDifficulty;
     if (difficulty == null || board.turn == humanSide || board.isGameOver) {
       return;
     }
@@ -232,7 +285,7 @@ class _GameScreenState extends State<GameScreen> {
 
   Future<void> _onHint() async {
     if (hintsRemaining <= 0 || board.isGameOver || isAiThinking) return;
-    final difficulty = widget.aiDifficulty ?? _hintDifficulty;
+    final difficulty = _aiDifficulty ?? _hintDifficulty;
     final move = await _engine.getBestMove(board, difficulty);
     if (!mounted || move == null) return;
     setState(() {
@@ -255,13 +308,14 @@ class _GameScreenState extends State<GameScreen> {
     if (_history.isEmpty || isAiThinking) return;
     // In vs-AI games, one Undo reverts both the AI's reply and the human's
     // move that provoked it, so the human always lands back on their turn.
-    final popCount = widget.aiDifficulty != null ? 2 : 1;
+    final popCount = _aiDifficulty != null ? 2 : 1;
     _GameSnapshot? target;
     for (var i = 0; i < popCount && _history.isNotEmpty; i++) {
       target = _history.removeLast();
     }
     if (target == null) return;
     setState(() {
+      undosUsed++;
       board = target!.board;
       visualPieces = target.visualPieces;
       capturedByRed = target.capturedByRed;
@@ -284,8 +338,16 @@ class _GameScreenState extends State<GameScreen> {
   @override
   Widget build(BuildContext context) {
     final evalScore = _engine.evaluateMaterialForRed(board);
+    final level = widget.campaignLevel;
     return Scaffold(
       backgroundColor: AppColors.jadeWhite,
+      appBar: level == null
+          ? null
+          : AppBar(
+              title: Text(level.title),
+              backgroundColor: AppColors.huanghuali,
+              foregroundColor: AppColors.jadeWhite,
+            ),
       body: SafeArea(
         child: Column(
           children: [

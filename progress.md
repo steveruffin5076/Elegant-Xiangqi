@@ -2,12 +2,14 @@
 
 Tracks implementation status against `claude_code_development_plan.md`.
 
-## Status: Phase 2 complete
+## Status: Phase 3 complete
 
-You can now play vs AI at 8 difficulty levels (menu → 人机对战), with
-hints, undo, and a material eval bar. The "AI" is a local heuristic
-search, not real Pikafish yet — see the Phase 2 entry below for why and
-what a future swap-in needs to preserve.
+Campaign mode (menu → 闯关模式) is playable: 5 chapters, 50 levels, a
+scrollable map with lock/star state persisted via Hive, and a win/loss
+result dialog. Chapter 1's 10 levels are hand-built tutorial positions;
+Chapters 2-5 intentionally reuse the standard starting position with
+escalating AI difficulty rather than 40 bespoke puzzles — see the Phase 3
+entry below for why and what's simplified.
 
 ## Phases
 
@@ -117,8 +119,65 @@ what a future swap-in needs to preserve.
         after a human move, verified through the real widget tree).
       - `flutter analyze` clean, `flutter test` (28/28 pass),
         `flutter build web --release` succeeds
-- [ ] **Phase 3 - Campaign Mode**: Hive save setup, campaign map screen (5
-      chapters x 10 levels), campaign data, result screen
+- [x] **Phase 3 - Campaign Mode**: Hive save setup, campaign map screen (5
+      chapters x 50 levels total per the design doc — 10+10+15+10+5),
+      campaign data, result screen
+      - **Scope cut, documented honestly**: the plan's exotic per-level
+        win conditions ("win using only Horses", "checkmate in 3") and
+        Chapter 3's "historical famous games" needed either a win-
+        condition engine (tracking move count / restricting which piece
+        types may move) or verified real historical FENs — neither was
+        feasible to do honestly in this pass (no way to verify a
+        "historical" FEN's authenticity without a source I could check).
+        The plan explicitly allows mocking here ("50 campaign levels,
+        even if some FENs mocked"). What's real: Chapter 1's 10 levels
+        are hand-built, reduced-material tutorial positions (one/two
+        piece types at a time, matching the design doc's teaching
+        progression) verified by `Board.fromFen` + `isGameOver` checks
+        in a test, not just typed by hand and trusted. Chapters 2-5 (40
+        levels) reuse the standard starting position with AI difficulty
+        scaled smoothly from tier 1 to tier 7 across the arc — real,
+        distinct, winnable games with real progression, just not
+        hand-authored puzzles.
+      - `lib/game/campaign_data.dart`: `CampaignLevel`/`CampaignChapter`
+        models; `allCampaignLevels` flattens all 50 for iteration.
+      - `lib/game/campaign_progress.dart`: Hive-backed persistence (best
+        star count per level id, a single linear "unlocked count" rather
+        than per-chapter gating, matching the map's one continuous
+        scroll). `main.dart` calls `Hive.initFlutter()` then
+        `CampaignProgress.init()` before `runApp`; tests use plain
+        `Hive.init(tempDir)` instead since `initFlutter` needs
+        path_provider's platform channel, unavailable under `flutter
+        test`.
+      - `lib/screens/campaign_map_screen.dart`: one continuous
+        `ListView` of 5 chapter bands (green-to-gold tint by chapter
+        number, standing in for the plan's "vertical ink wash painting"
+        — actual painted art + parallax mountains is Phase 4), each with
+        its level nodes; locked nodes show a lock icon over the level
+        number (dimmed) rather than a separate art asset.
+      - `game_screen.dart`: new `campaignLevel` param loads the level's
+        FEN and difficulty (overriding `aiDifficulty`). On game-over,
+        computes stars (3 = won with 0 hints/undos used, 2 = won with
+        ≤2 combined, 1 = any other win, 0 = loss), records via
+        `CampaignProgress.recordResult`, and shows
+        `CampaignResultDialog` (ink-stamp 胜/负 + gold star seals, per
+        the plan) with a button back to the map.
+      - Tests: `test/game/campaign_data_test.dart` (all 50 FENs parse,
+        both generals present, Red to move, not already over, ids
+        unique, difficulty non-decreasing); `test/game/
+        campaign_progress_test.dart` (Hive round-trip: fresh state,
+        recording a win unlocks the next level, a worse replay never
+        lowers stars, a loss doesn't unlock); `test/screens/
+        campaign_flow_test.dart` (menu → map → locked level does
+        nothing, unlocked level opens the real game, through the actual
+        widget tree). Found and fixed a real off-by-one in
+        `CampaignProgress.recordResult` this way (it compared
+        `overallIndex + 1` against `unlockedCount` instead of
+        `overallIndex + 2`, so winning never actually unlocked
+        anything) — caught by the Hive round-trip test, not by reading
+        the code.
+      - `flutter analyze` clean, `flutter test` (37/37 pass),
+        `flutter build web --release` succeeds
 - [ ] **Phase 4 - Polish + Android + Web Build**: sounds, 3 themes,
       performance pass, release builds, app icons
 

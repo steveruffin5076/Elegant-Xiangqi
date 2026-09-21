@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../theme/colors.dart';
+import 'campaign_map_screen.dart';
 import 'difficulty_select_screen.dart';
 import 'game_screen.dart';
 
@@ -47,6 +48,15 @@ class HomeScreen extends StatelessWidget {
                   onTap: () => Navigator.of(context).push(
                     MaterialPageRoute(
                       builder: (_) => const DifficultySelectScreen(),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                _MenuButton(
+                  label: '闯关模式  Campaign',
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => const CampaignMapScreen(),
                     ),
                   ),
                 ),
