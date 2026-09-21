@@ -15,6 +15,7 @@ import '../widgets/campaign_result_dialog.dart';
 import '../widgets/captured_tray.dart';
 import '../widgets/control_bar.dart';
 import '../widgets/eval_bar.dart';
+import '../widgets/game_result_dialog.dart';
 import '../widgets/visual_piece.dart';
 import 'home_screen.dart';
 
@@ -113,16 +114,46 @@ class _GameScreenState extends State<GameScreen> {
     board = widget.campaignLevel != null
         ? Board.fromFen(widget.campaignLevel!.fen)
         : Board.initial();
-    visualPieces = [
-      for (var r = 0; r < Board.rows; r++)
-        for (var c = 0; c < Board.cols; c++)
-          if (board.squares[r][c] != null)
-            VisualPiece(
-              id: _nextPieceId++,
-              piece: board.squares[r][c]!,
-              position: BoardPosition(r, c),
-            ),
-    ];
+    visualPieces = _buildVisualPieces(board);
+  }
+
+  List<VisualPiece> _buildVisualPieces(Board b) => [
+    for (var r = 0; r < Board.rows; r++)
+      for (var c = 0; c < Board.cols; c++)
+        if (b.squares[r][c] != null)
+          VisualPiece(
+            id: _nextPieceId++,
+            piece: b.squares[r][c]!,
+            position: BoardPosition(r, c),
+          ),
+  ];
+
+  /// Resets to a fresh match of the same kind (same opponent, if any) —
+  /// used by the "Retry" button on [GameResultDialog].
+  void _resetGame() {
+    setState(() {
+      board = widget.campaignLevel != null
+          ? Board.fromFen(widget.campaignLevel!.fen)
+          : Board.initial();
+      visualPieces = _buildVisualPieces(board);
+      selected = null;
+      legalDestinations = [];
+      blockedLegs = [];
+      capturedByRed = [];
+      capturedByBlack = [];
+      statusMessage = null;
+      _history.clear();
+      activeSplashes.clear();
+      fadingGhosts.clear();
+      movingPieceId = null;
+      shakingPieceId = null;
+      shakeSeed = 0;
+      isAiThinking = false;
+      hintsRemaining = _totalHints;
+      undosUsed = 0;
+      hintFrom = null;
+      hintTo = null;
+    });
   }
 
   @override
@@ -261,7 +292,11 @@ class _GameScreenState extends State<GameScreen> {
     });
 
     if (board.isGameOver) {
-      _handleCampaignGameOver(moverSide);
+      if (widget.campaignLevel != null) {
+        _handleCampaignGameOver(moverSide);
+      } else {
+        _showGameOverDialog(moverSide);
+      }
     } else {
       _maybeTriggerAiMove();
     }
@@ -269,6 +304,22 @@ class _GameScreenState extends State<GameScreen> {
 
   void _onGhostFadeComplete(int id) {
     setState(() => fadingGhosts.remove(id));
+  }
+
+  void _showGameOverDialog(Side moverSide) {
+    showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => GameResultDialog(
+        message: moverSide == Side.red ? '红方胜！' : '黑方胜！',
+        palette: themeController.palette,
+        onClose: () => Navigator.of(context).pop(),
+        onRetry: () {
+          Navigator.of(context).pop();
+          _resetGame();
+        },
+      ),
+    );
   }
 
   void _handleCampaignGameOver(Side moverSide) {

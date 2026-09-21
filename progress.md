@@ -294,6 +294,17 @@ environment's egress proxy) and what to do on a machine that has it.
     finishes (same pattern as the existing ink-splash `activeSplashes`).
 - `flutter analyze` clean, `flutter test` (42/42 pass),
   `flutter build web --release` succeeds.
+- **Centered game-over popup** (non-campaign games): "红方胜！"/"黑方胜！"
+  used to only show as small text in the bottom info bar. Added
+  `lib/widgets/game_result_dialog.dart` (`GameResultDialog`), a centered
+  modal with 关闭 Close (dismiss, board stays frozen — it was already
+  game-over) and 再来一局 Retry (resets to a fresh match of the same
+  kind via the new `_resetGame()` in `game_screen.dart`, reusing the
+  opponent/difficulty already in play). Campaign games are unaffected —
+  they still use the existing `CampaignResultDialog` with stars. Info
+  bar text is unchanged/still shown alongside the popup.
+  `flutter analyze` clean, `flutter test` (43/43 pass),
+  `flutter build web --release` succeeds.
 
 ## Notes
 
