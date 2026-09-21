@@ -36,7 +36,8 @@ Alternative if user prefers Web-first: React + PixiJS + Capacitor (but Flutter i
 8. **Progress Tracking**: Always update `progress.md` with current status, what changed, and any important notes/deviations from plan — after finishing a phase or making a significant change, before ending the session.
 
 ## Current Phase
-Phase 1: Elegant art + piece interaction
+Phase 2: Pikafish AI + difficulty levels (see progress.md — currently a
+local heuristic engine standing in for real Pikafish, same API)
 
 ## Commands
 - `flutter run -d chrome` for web

@@ -5,6 +5,7 @@ import '../game/board.dart';
 import '../theme/colors.dart';
 import 'ink_splash.dart';
 import 'piece_widget.dart';
+import 'pulsing_dot.dart';
 import 'visual_piece.dart';
 
 class BoardWidget extends StatelessWidget {
@@ -17,6 +18,8 @@ class BoardWidget extends StatelessWidget {
   final Map<int, BoardPosition> activeSplashes;
   final ValueChanged<int> onSplashComplete;
   final ValueChanged<BoardPosition> onTapSquare;
+  final BoardPosition? hintFrom;
+  final BoardPosition? hintTo;
 
   const BoardWidget({
     super.key,
@@ -29,6 +32,8 @@ class BoardWidget extends StatelessWidget {
     required this.activeSplashes,
     required this.onSplashComplete,
     required this.onTapSquare,
+    this.hintFrom,
+    this.hintTo,
   });
 
   @override
@@ -91,6 +96,16 @@ class BoardWidget extends StatelessWidget {
                       onCompleted: () => onSplashComplete(entry.key),
                     ),
                   ),
+                for (final hint in [hintFrom, hintTo])
+                  if (hint != null)
+                    Positioned(
+                      key: ValueKey('hint-$hint'),
+                      left: hint.col * cellWidth,
+                      top: hint.row * cellHeight,
+                      width: cellWidth,
+                      height: cellHeight,
+                      child: const PulsingDot(),
+                    ),
               ],
             ),
           );

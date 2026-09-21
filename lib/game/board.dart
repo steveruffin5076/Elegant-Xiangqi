@@ -176,4 +176,8 @@ class Board {
   bool get isCheckmate => isInCheck(turn) && allLegalMoves(turn).isEmpty;
 
   bool get isStalemate => !isInCheck(turn) && allLegalMoves(turn).isEmpty;
+
+  /// Unlike international chess, Xiangqi has no stalemate draw: a side with
+  /// no legal move loses regardless of whether it's in check.
+  bool get isGameOver => allLegalMoves(turn).isEmpty;
 }

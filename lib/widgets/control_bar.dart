@@ -7,6 +7,7 @@ class ControlBar extends StatelessWidget {
   final VoidCallback? onHint;
   final VoidCallback? onMenu;
   final VoidCallback? onAnalysis;
+  final int hintsRemaining;
 
   const ControlBar({
     super.key,
@@ -14,6 +15,7 @@ class ControlBar extends StatelessWidget {
     this.onHint,
     this.onMenu,
     this.onAnalysis,
+    this.hintsRemaining = 3,
   });
 
   @override
@@ -26,7 +28,7 @@ class ControlBar extends StatelessWidget {
           _ControlButton(icon: Icons.undo, label: '悔棋', onPressed: onUndo),
           _ControlButton(
             icon: Icons.lightbulb_outline,
-            label: '提示',
+            label: '提示 $hintsRemaining',
             onPressed: onHint,
           ),
           _ControlButton(icon: Icons.menu, label: '菜单', onPressed: onMenu),
