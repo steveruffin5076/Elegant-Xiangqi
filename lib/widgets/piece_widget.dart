@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../game/piece.dart';
+import '../theme/motion.dart';
 import '../theme/palette.dart';
 
 class PieceWidget extends StatelessWidget {
@@ -42,10 +43,10 @@ class PieceWidget extends StatelessWidget {
           : lifted
           ? 1.12
           : 1.0,
-      duration: const Duration(milliseconds: 220),
+      duration: pieceMoveDuration,
       curve: Curves.easeOutCubic,
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 220),
+        duration: pieceMoveDuration,
         curve: Curves.easeOutCubic,
         decoration: BoxDecoration(
           shape: BoxShape.circle,

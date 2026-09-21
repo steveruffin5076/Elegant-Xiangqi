@@ -305,6 +305,18 @@ environment's egress proxy) and what to do on a machine that has it.
   bar text is unchanged/still shown alongside the popup.
   `flutter analyze` clean, `flutter test` (43/43 pass),
   `flutter build web --release` succeeds.
+- **Removed the duplicate win/loss text** below the board, and **slowed
+  the move animation**: the info bar previously repeated "红方胜！"/
+  "黑方胜！" underneath the new centered popup — `statusMessage` no
+  longer gets set to that text on game over (still shows "将军!" for
+  check, as before). The 220ms move slide/lift/capture-fade felt too
+  quick — bumped to 380ms via a new shared `lib/theme/motion.dart`
+  (`pieceMoveDuration`), replacing the repeated `220` magic number
+  across `board_widget.dart`, `piece_widget.dart`, and the
+  `movingPieceId` clear timer in `game_screen.dart`, so all of it stays
+  in lockstep.
+  `flutter analyze` clean, `flutter test` (43/43 pass),
+  `flutter build web --release` succeeds.
 
 ## Notes
 
