@@ -1,4 +1,7 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 import '../game/piece.dart';
 import '../theme/colors.dart';
@@ -7,23 +10,37 @@ class PieceWidget extends StatelessWidget {
   final Piece piece;
   final bool selected;
 
-  const PieceWidget({super.key, required this.piece, this.selected = false});
+  /// Bumping this value plays a one-shot "invalid move" wiggle — used for
+  /// a hobbled horse leg, an elephant blocked at the river, etc. A value
+  /// of 0 means "not shaking".
+  final int shakeSeed;
+
+  const PieceWidget({
+    super.key,
+    required this.piece,
+    this.selected = false,
+    this.shakeSeed = 0,
+  });
 
   @override
   Widget build(BuildContext context) {
     final isRed = piece.side == Side.red;
-    final baseColor = isRed ? AppColors.jadeWhite : AppColors.obsidianBlack;
     final textColor = isRed ? AppColors.imperialRed : AppColors.jadeWhite;
 
-    return AnimatedScale(
+    final pieceBody = AnimatedScale(
       scale: selected ? 1.1 : 1.0,
       duration: const Duration(milliseconds: 220),
       curve: Curves.easeOutCubic,
       child: Container(
         decoration: BoxDecoration(
           shape: BoxShape.circle,
-          color: baseColor,
-          border: Border.all(color: AppColors.gold, width: 2),
+          gradient: RadialGradient(
+            center: const Alignment(-0.3, -0.3),
+            colors: isRed
+                ? const [AppColors.jadeWhite, Color(0xFFE8E0D0)]
+                : const [Color(0xFF2E2E2E), AppColors.obsidianBlack],
+          ),
+          border: Border.all(color: AppColors.gold, width: 2.5),
           boxShadow: selected
               ? [
                   BoxShadow(
@@ -45,11 +62,25 @@ class PieceWidget extends StatelessWidget {
             padding: const EdgeInsets.all(4),
             child: Text(
               piece.character,
-              style: TextStyle(color: textColor, fontWeight: FontWeight.bold),
+              style: GoogleFonts.notoSerifSc(
+                color: textColor,
+                fontWeight: FontWeight.bold,
+              ),
             ),
           ),
         ),
       ),
+    );
+
+    return TweenAnimationBuilder<double>(
+      key: ValueKey(shakeSeed),
+      tween: Tween(begin: 0, end: shakeSeed == 0 ? 0.0 : 1.0),
+      duration: const Duration(milliseconds: 320),
+      builder: (context, t, child) {
+        final dx = sin(t * pi * 4) * 6 * (1 - t);
+        return Transform.translate(offset: Offset(dx, 0), child: child);
+      },
+      child: pieceBody,
     );
   }
 }

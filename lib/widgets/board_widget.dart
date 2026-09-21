@@ -1,20 +1,33 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 import '../game/board.dart';
 import '../theme/colors.dart';
+import 'ink_splash.dart';
 import 'piece_widget.dart';
+import 'visual_piece.dart';
 
 class BoardWidget extends StatelessWidget {
-  final Board board;
+  final List<VisualPiece> pieces;
   final BoardPosition? selected;
   final List<BoardPosition> legalDestinations;
+  final List<BoardPosition> blockedLegs;
+  final int? shakingPieceId;
+  final int shakeSeed;
+  final Map<int, BoardPosition> activeSplashes;
+  final ValueChanged<int> onSplashComplete;
   final ValueChanged<BoardPosition> onTapSquare;
 
   const BoardWidget({
     super.key,
-    required this.board,
+    required this.pieces,
     required this.selected,
     required this.legalDestinations,
+    required this.blockedLegs,
+    required this.shakingPieceId,
+    required this.shakeSeed,
+    required this.activeSplashes,
+    required this.onSplashComplete,
     required this.onTapSquare,
   });
 
@@ -48,21 +61,36 @@ class BoardWidget extends StatelessWidget {
                   painter: _BoardPainter(
                     selected: selected,
                     legalDestinations: legalDestinations,
+                    blockedLegs: blockedLegs,
                   ),
                 ),
-                for (var r = 0; r < Board.rows; r++)
-                  for (var c = 0; c < Board.cols; c++)
-                    if (board.squares[r][c] != null)
-                      Positioned(
-                        left: c * cellWidth + cellWidth * 0.05,
-                        top: r * cellHeight + cellHeight * 0.05,
-                        width: cellWidth * 0.9,
-                        height: cellHeight * 0.9,
-                        child: PieceWidget(
-                          piece: board.squares[r][c]!,
-                          selected: selected == BoardPosition(r, c),
-                        ),
-                      ),
+                for (final visualPiece in pieces)
+                  AnimatedPositioned(
+                    key: ValueKey(visualPiece.id),
+                    duration: const Duration(milliseconds: 220),
+                    curve: Curves.easeOutCubic,
+                    left: visualPiece.position.col * cellWidth + cellWidth * 0.05,
+                    top: visualPiece.position.row * cellHeight + cellHeight * 0.05,
+                    width: cellWidth * 0.9,
+                    height: cellHeight * 0.9,
+                    child: PieceWidget(
+                      piece: visualPiece.piece,
+                      selected: selected == visualPiece.position,
+                      shakeSeed: shakingPieceId == visualPiece.id
+                          ? shakeSeed
+                          : 0,
+                    ),
+                  ),
+                for (final entry in activeSplashes.entries)
+                  Positioned(
+                    left: entry.value.col * cellWidth,
+                    top: entry.value.row * cellHeight,
+                    width: cellWidth,
+                    height: cellHeight,
+                    child: CaptureInkSplash(
+                      onCompleted: () => onSplashComplete(entry.key),
+                    ),
+                  ),
               ],
             ),
           );
@@ -75,17 +103,29 @@ class BoardWidget extends StatelessWidget {
 class _BoardPainter extends CustomPainter {
   final BoardPosition? selected;
   final List<BoardPosition> legalDestinations;
+  final List<BoardPosition> blockedLegs;
 
-  _BoardPainter({required this.selected, required this.legalDestinations});
+  _BoardPainter({
+    required this.selected,
+    required this.legalDestinations,
+    required this.blockedLegs,
+  });
 
   @override
   void paint(Canvas canvas, Size size) {
     final cellWidth = size.width / Board.cols;
     final cellHeight = size.height / Board.rows;
+    final rect = Offset.zero & size;
 
+    // Huanghuali wood: warm gradient standing in for a scanned PBR texture.
     canvas.drawRect(
-      Offset.zero & size,
-      Paint()..color = AppColors.huanghuali,
+      rect,
+      Paint()
+        ..shader = const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFF9C6A38), AppColors.huanghuali, Color(0xFF7A4B20)],
+        ).createShader(rect),
     );
 
     final linePaint = Paint()
@@ -112,14 +152,22 @@ class _BoardPainter extends CustomPainter {
 
     // River band between rows 4 and 5, inscribed with 楚河 汉界.
     final riverTop = 4 * cellHeight + cellHeight / 2;
+    final riverRect = Rect.fromLTWH(0, riverTop, size.width, cellHeight);
     canvas.drawRect(
-      Rect.fromLTWH(0, riverTop, size.width, cellHeight),
-      Paint()..color = AppColors.jadeWhite.withValues(alpha: 0.5),
+      riverRect,
+      Paint()
+        ..shader = LinearGradient(
+          colors: [
+            AppColors.jadeWhite.withValues(alpha: 0.55),
+            AppColors.celadon.withValues(alpha: 0.35),
+            AppColors.jadeWhite.withValues(alpha: 0.55),
+          ],
+        ).createShader(riverRect),
     );
     final riverText = TextPainter(
-      text: const TextSpan(
+      text: TextSpan(
         text: '楚 河          汉 界',
-        style: TextStyle(
+        style: GoogleFonts.notoSerifSc(
           color: AppColors.gold,
           fontSize: 20,
           fontWeight: FontWeight.bold,
@@ -163,6 +211,10 @@ class _BoardPainter extends CustomPainter {
         Paint()..color = AppColors.obsidianBlack.withValues(alpha: 0.4),
       );
     }
+
+    for (final leg in blockedLegs) {
+      _drawBlockedX(canvas, leg, cellWidth, cellHeight);
+    }
   }
 
   void _drawPalace(
@@ -171,20 +223,58 @@ class _BoardPainter extends CustomPainter {
     double cellHeight, {
     required int topRow,
   }) {
-    final paint = Paint()
-      ..color = AppColors.gold
-      ..strokeWidth = 1.5
-      ..style = PaintingStyle.stroke;
     final left = 3 * cellWidth + cellWidth / 2;
     final right = 5 * cellWidth + cellWidth / 2;
     final top = topRow * cellHeight + cellHeight / 2;
     final bottom = (topRow + 2) * cellHeight + cellHeight / 2;
-    canvas.drawLine(Offset(left, top), Offset(right, bottom), paint);
-    canvas.drawLine(Offset(right, top), Offset(left, bottom), paint);
+
+    // Soft gold-leaf glow pass beneath the crisp diagonal lines.
+    final glowPaint = Paint()
+      ..color = AppColors.gold.withValues(alpha: 0.35)
+      ..strokeWidth = 5
+      ..style = PaintingStyle.stroke
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4);
+    canvas.drawLine(Offset(left, top), Offset(right, bottom), glowPaint);
+    canvas.drawLine(Offset(right, top), Offset(left, bottom), glowPaint);
+
+    final linePaint = Paint()
+      ..color = AppColors.gold
+      ..strokeWidth = 1.5
+      ..style = PaintingStyle.stroke;
+    canvas.drawLine(Offset(left, top), Offset(right, bottom), linePaint);
+    canvas.drawLine(Offset(right, top), Offset(left, bottom), linePaint);
+  }
+
+  void _drawBlockedX(
+    Canvas canvas,
+    BoardPosition pos,
+    double cellWidth,
+    double cellHeight,
+  ) {
+    final center = Offset(
+      pos.col * cellWidth + cellWidth / 2,
+      pos.row * cellHeight + cellHeight / 2,
+    );
+    final half = cellWidth * 0.2;
+    final paint = Paint()
+      ..color = AppColors.imperialRed
+      ..strokeWidth = 3
+      ..strokeCap = StrokeCap.round;
+    canvas.drawLine(
+      center + Offset(-half, -half),
+      center + Offset(half, half),
+      paint,
+    );
+    canvas.drawLine(
+      center + Offset(half, -half),
+      center + Offset(-half, half),
+      paint,
+    );
   }
 
   @override
   bool shouldRepaint(covariant _BoardPainter oldDelegate) =>
       oldDelegate.selected != selected ||
-      oldDelegate.legalDestinations != legalDestinations;
+      oldDelegate.legalDestinations != legalDestinations ||
+      oldDelegate.blockedLegs != blockedLegs;
 }

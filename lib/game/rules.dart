@@ -88,6 +88,17 @@ class Rules {
     (1, 2, 0, 1),
   ];
 
+  /// Leg squares that are currently occupied and hobble a move from [from]
+  /// — used to render the "blocked" indicator on the selected horse.
+  static List<BoardPosition> horseBlockedLegs(Board board, BoardPosition from) {
+    final legs = <BoardPosition>{};
+    for (final step in _horseSteps) {
+      final leg = BoardPosition(from.row + step.$3, from.col + step.$4);
+      if (leg.isValid && board.pieceAt(leg) != null) legs.add(leg);
+    }
+    return legs.toList();
+  }
+
   static List<BoardMove> horseMoves(
     Board board,
     BoardPosition from,
