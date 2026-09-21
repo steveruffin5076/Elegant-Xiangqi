@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
 
-import '../theme/colors.dart';
+import '../theme/palette.dart';
 
-/// Vertical evaluation bar. Neutral placeholder until Phase 2 wires it to
-/// the engine's evaluation score (-10 to +10, Red-positive).
+/// Vertical evaluation bar showing the engine's material balance
+/// (-1 = Black favored, +1 = Red favored).
 class EvalBar extends StatelessWidget {
   final double value;
+  final Palette palette;
 
-  const EvalBar({super.key, this.value = 0});
+  const EvalBar({super.key, required this.palette, this.value = 0});
 
   @override
   Widget build(BuildContext context) {
@@ -16,7 +17,7 @@ class EvalBar extends StatelessWidget {
       width: 6,
       height: 24,
       decoration: BoxDecoration(
-        color: AppColors.obsidianBlack,
+        color: palette.blackPieceGradientEnd,
         borderRadius: BorderRadius.circular(3),
       ),
       child: FractionallySizedBox(
@@ -24,7 +25,7 @@ class EvalBar extends StatelessWidget {
         heightFactor: redFraction,
         child: DecoratedBox(
           decoration: BoxDecoration(
-            color: AppColors.gold,
+            color: palette.gridLines,
             borderRadius: BorderRadius.circular(3),
           ),
         ),

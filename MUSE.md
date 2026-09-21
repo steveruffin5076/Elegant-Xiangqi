@@ -36,10 +36,12 @@ Alternative if user prefers Web-first: React + PixiJS + Capacitor (but Flutter i
 8. **Progress Tracking**: Always update `progress.md` with current status, what changed, and any important notes/deviations from plan — after finishing a phase or making a significant change, before ending the session.
 
 ## Current Phase
-Phase 3: Campaign Mode (see progress.md — Chapter 1 is hand-built
-tutorial content; Chapters 2-5 are standard-position games at scaled
-difficulty, not bespoke puzzles/historical FENs, per the plan's own
-"mocking is fine" allowance)
+Phase 4 complete: sounds, 3 themes, app icon/splash, performance
+RepaintBoundaries, web release build all verified (see progress.md).
+Android APK cannot be built in this sandbox — no Android SDK and
+dl.google.com is blocked by the egress proxy; needs a machine with SDK
+access. All 4 planned phases are now done; nothing left on the plan's
+own checklist except that Android build step.
 
 ## Commands
 - `flutter run -d chrome` for web

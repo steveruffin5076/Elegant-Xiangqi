@@ -4,11 +4,12 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../game/piece.dart';
-import '../theme/colors.dart';
+import '../theme/palette.dart';
 
 class PieceWidget extends StatelessWidget {
   final Piece piece;
   final bool selected;
+  final Palette palette;
 
   /// Bumping this value plays a one-shot "invalid move" wiggle — used for
   /// a hobbled horse leg, an elephant blocked at the river, etc. A value
@@ -18,6 +19,7 @@ class PieceWidget extends StatelessWidget {
   const PieceWidget({
     super.key,
     required this.piece,
+    required this.palette,
     this.selected = false,
     this.shakeSeed = 0,
   });
@@ -25,7 +27,7 @@ class PieceWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isRed = piece.side == Side.red;
-    final textColor = isRed ? AppColors.imperialRed : AppColors.jadeWhite;
+    final textColor = isRed ? palette.redPieceText : palette.blackPieceText;
 
     final pieceBody = AnimatedScale(
       scale: selected ? 1.1 : 1.0,
@@ -37,14 +39,17 @@ class PieceWidget extends StatelessWidget {
           gradient: RadialGradient(
             center: const Alignment(-0.3, -0.3),
             colors: isRed
-                ? const [AppColors.jadeWhite, Color(0xFFE8E0D0)]
-                : const [Color(0xFF2E2E2E), AppColors.obsidianBlack],
+                ? [palette.redPieceGradientStart, palette.redPieceGradientEnd]
+                : [
+                    palette.blackPieceGradientStart,
+                    palette.blackPieceGradientEnd,
+                  ],
           ),
-          border: Border.all(color: AppColors.gold, width: 2.5),
+          border: Border.all(color: palette.pieceRim, width: 2.5),
           boxShadow: selected
               ? [
                   BoxShadow(
-                    color: AppColors.gold.withValues(alpha: 0.6),
+                    color: palette.pieceRim.withValues(alpha: 0.6),
                     blurRadius: 12,
                   ),
                 ]

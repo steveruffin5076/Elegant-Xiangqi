@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 
 import '../game/piece.dart';
+import '../theme/palette.dart';
 import 'piece_widget.dart';
 
 class CapturedTray extends StatelessWidget {
   final List<Piece> pieces;
+  final Palette palette;
 
-  const CapturedTray({super.key, required this.pieces});
+  const CapturedTray({super.key, required this.pieces, required this.palette});
 
   @override
   Widget build(BuildContext context) {
@@ -21,7 +23,7 @@ class CapturedTray extends StatelessWidget {
               child: SizedBox(
                 width: 24,
                 height: 24,
-                child: PieceWidget(piece: piece),
+                child: PieceWidget(piece: piece, palette: palette),
               ),
             ),
         ],

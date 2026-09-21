@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../audio/audio_service.dart';
 import '../engine/pikafish.dart';
 import '../game/board.dart';
 import '../game/campaign_data.dart';
@@ -7,7 +8,8 @@ import '../game/campaign_progress.dart';
 import '../game/difficulty.dart';
 import '../game/piece.dart';
 import '../game/rules.dart';
-import '../theme/colors.dart';
+import '../theme/palette.dart';
+import '../theme/theme_controller.dart';
 import '../widgets/board_widget.dart';
 import '../widgets/campaign_result_dialog.dart';
 import '../widgets/captured_tray.dart';
@@ -69,6 +71,7 @@ class _GameScreenState extends State<GameScreen> {
   static const humanSide = Side.red;
 
   final Pikafish _engine = Pikafish();
+  final AudioService _audio = AudioService();
   final List<_GameSnapshot> _history = [];
 
   late Board board;
@@ -114,6 +117,12 @@ class _GameScreenState extends State<GameScreen> {
     ];
   }
 
+  @override
+  void dispose() {
+    _audio.dispose();
+    super.dispose();
+  }
+
   bool get _isAiTurn => _aiDifficulty != null && board.turn != humanSide;
 
   VisualPiece _visualPieceAt(BoardPosition pos) =>
@@ -154,7 +163,7 @@ class _GameScreenState extends State<GameScreen> {
   }
 
   void _select(BoardPosition pos) {
-    debugPrint('bronze bell chime (piece selected)');
+    _audio.playSelect();
     final piece = board.pieceAt(pos)!;
     setState(() {
       selected = pos;
@@ -193,6 +202,12 @@ class _GameScreenState extends State<GameScreen> {
         : visualPieces.firstWhere(
             (p) => p.position == move.to && p.id != movingVisual.id,
           );
+
+    if (capturedPiece != null) {
+      _audio.playCapture();
+    } else {
+      _audio.playMove();
+    }
 
     setState(() {
       board = nextBoard;
@@ -337,16 +352,23 @@ class _GameScreenState extends State<GameScreen> {
 
   @override
   Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: themeController,
+      builder: (context, _) => _build(context, themeController.palette),
+    );
+  }
+
+  Widget _build(BuildContext context, Palette palette) {
     final evalScore = _engine.evaluateMaterialForRed(board);
     final level = widget.campaignLevel;
     return Scaffold(
-      backgroundColor: AppColors.jadeWhite,
+      backgroundColor: palette.scaffoldBackground,
       appBar: level == null
           ? null
           : AppBar(
               title: Text(level.title),
-              backgroundColor: AppColors.huanghuali,
-              foregroundColor: AppColors.jadeWhite,
+              backgroundColor: palette.appBarBackground,
+              foregroundColor: palette.scaffoldBackground,
             ),
       body: SafeArea(
         child: Column(
@@ -357,9 +379,13 @@ class _GameScreenState extends State<GameScreen> {
                 turn: board.turn,
                 thinking: isAiThinking,
                 evalValue: (evalScore / 48).clamp(-1.0, 1.0),
+                palette: palette,
               ),
             ),
-            Expanded(flex: 4, child: CapturedTray(pieces: capturedByBlack)),
+            Expanded(
+              flex: 4,
+              child: CapturedTray(pieces: capturedByBlack, palette: palette),
+            ),
             Expanded(
               flex: 62,
               child: Padding(
@@ -377,12 +403,19 @@ class _GameScreenState extends State<GameScreen> {
                     onTapSquare: _onTapSquare,
                     hintFrom: hintFrom,
                     hintTo: hintTo,
+                    palette: palette,
                   ),
                 ),
               ),
             ),
-            Expanded(flex: 4, child: CapturedTray(pieces: capturedByRed)),
-            Expanded(flex: 8, child: _InfoPanel(message: statusMessage)),
+            Expanded(
+              flex: 4,
+              child: CapturedTray(pieces: capturedByRed, palette: palette),
+            ),
+            Expanded(
+              flex: 8,
+              child: _InfoPanel(message: statusMessage, palette: palette),
+            ),
             Expanded(
               flex: 10,
               child: ControlBar(
@@ -406,17 +439,19 @@ class _StatusBar extends StatelessWidget {
   final Side turn;
   final bool thinking;
   final double evalValue;
+  final Palette palette;
 
   const _StatusBar({
     required this.turn,
     required this.thinking,
     required this.evalValue,
+    required this.palette,
   });
 
   @override
   Widget build(BuildContext context) {
     return ColoredBox(
-      color: AppColors.huanghuali.withValues(alpha: 0.08),
+      color: palette.appBarBackground.withValues(alpha: 0.12),
       child: Row(
         children: [
           const SizedBox(width: 12),
@@ -424,13 +459,13 @@ class _StatusBar extends StatelessWidget {
             thinking
                 ? '对方思考中…'
                 : (turn == Side.red ? '红方走棋' : '黑方走棋'),
-            style: const TextStyle(
+            style: TextStyle(
               fontWeight: FontWeight.bold,
-              color: AppColors.obsidianBlack,
+              color: palette.blockedX,
             ),
           ),
           const Spacer(),
-          EvalBar(value: evalValue),
+          EvalBar(value: evalValue, palette: palette),
           const SizedBox(width: 12),
         ],
       ),
@@ -440,18 +475,19 @@ class _StatusBar extends StatelessWidget {
 
 class _InfoPanel extends StatelessWidget {
   final String? message;
+  final Palette palette;
 
-  const _InfoPanel({required this.message});
+  const _InfoPanel({required this.message, required this.palette});
 
   @override
   Widget build(BuildContext context) {
     return ColoredBox(
-      color: AppColors.celadon.withValues(alpha: 0.15),
+      color: palette.riverMid.withValues(alpha: 0.15),
       child: Center(
         child: Text(
           message ?? '',
-          style: const TextStyle(
-            color: AppColors.imperialRed,
+          style: TextStyle(
+            color: palette.blockedX,
             fontWeight: FontWeight.bold,
           ),
         ),

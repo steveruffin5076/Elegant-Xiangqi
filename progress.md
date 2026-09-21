@@ -2,14 +2,15 @@
 
 Tracks implementation status against `claude_code_development_plan.md`.
 
-## Status: Phase 3 complete
+## Status: Phase 4 complete (web release-ready; Android APK not buildable here)
 
-Campaign mode (menu → 闯关模式) is playable: 5 chapters, 50 levels, a
-scrollable map with lock/star state persisted via Hive, and a win/loss
-result dialog. Chapter 1's 10 levels are hand-built tutorial positions;
-Chapters 2-5 intentionally reuse the standard starting position with
-escalating AI difficulty rather than 40 bespoke puzzles — see the Phase 3
-entry below for why and what's simplified.
+Real sound effects, 3 selectable themes, a generated app icon/splash
+screen, board-render performance passes, and a portrait-centered desktop
+web build all landed. `flutter build web --release` succeeds and is the
+actual deliverable from this sandbox. `flutter build apk --release` is
+NOT possible here — see the Phase 4 entry below for the concrete blocker
+(the Android SDK can't be installed: `dl.google.com` is denied by this
+environment's egress proxy) and what to do on a machine that has it.
 
 ## Phases
 
@@ -178,8 +179,84 @@ entry below for why and what's simplified.
         the code.
       - `flutter analyze` clean, `flutter test` (37/37 pass),
         `flutter build web --release` succeeds
-- [ ] **Phase 4 - Polish + Android + Web Build**: sounds, 3 themes,
+- [x] **Phase 4 - Polish + Android + Web Build**: sounds, 3 themes,
       performance pass, release builds, app icons
+      - **Android APK: not buildable in this sandbox, confirmed and
+        documented rather than skipped silently.** `flutter doctor`
+        already showed no Android SDK; installing one needs
+        `dl.google.com` (SDK components AND the Android Gradle plugin's
+        Maven dependencies both come from there), and this environment's
+        egress proxy denies that host outright (`CONNECT tunnel failed,
+        response 403`) — confirmed directly, not assumed. Ran `flutter
+        build apk --release` anyway to get the real error on record:
+        `No Android SDK found`. The Android project itself (gradle
+        files, manifest, generated launcher icons/splash) is otherwise
+        release-shaped from `flutter create` plus the generators below;
+        someone with SDK access should be able to `flutter build apk
+        --release` directly. `flutter build web --release` **does**
+        succeed here and is what this pass actually verifies end to end.
+      - **Sounds**: real (if simple) synthesized WAV effects, not
+        silence — `assets/audio/{bell,rustle,splash}.wav`, generated
+        with pure Python stdlib (`wave`/`struct`/`math`, no deps): a
+        decaying 2-harmonic sine "bell" for select, a low-pass-filtered
+        noise burst for the move "rustle", noise+thump for the capture
+        "splash". `lib/audio/audio_service.dart` wraps `audioplayers`;
+        every call swallows its own errors (audio is non-critical, and
+        a headless/test environment has no real audio backend) so it
+        can never crash or block a move. Replaces the Phase 1 `debugPrint`
+        placeholder for the select chime.
+      - **3 themes**: `lib/theme/palette.dart` defines `Palette` (board
+        gradient, grid/river/palace colors, piece gradients+rim+text,
+        scaffold/app-bar background) with 3 const instances —
+        Huanghuali & Jade (default), Obsidian & Moonlight (dark, black
+        stone board + gold lines + glowing pieces), Imperial Scroll
+        (parchment board, ink-black grid). `lib/theme/theme_controller.dart`
+        is a **plain global `ChangeNotifier` singleton**, not
+        Provider/InheritedWidget — deliberately, because a couple of
+        existing widget tests construct `GameScreen` directly under a
+        bare `MaterialApp` rather than the full app root, and anything
+        relying on an ancestor provider would have broken there.
+        Widgets that need to react wrap themselves in
+        `AnimatedBuilder(animation: themeController, ...)`. Persisted in
+        the `settings` Hive box the plan called for back in Phase 3.
+        New `lib/screens/settings_screen.dart` (reachable via Home →
+        主题) lists the 3 themes; picking one updates board/piece/chrome
+        colors live.
+      - Found and fixed a real test-infra deadlock while adding the
+        settings flow test: `Hive.deleteFromDisk()` in `tearDown` hung
+        forever when it raced a still-in-flight fire-and-forget Hive
+        write from the theme-card tap earlier in the same test. Root-
+        caused with a minimal repro (bisected by deleting pieces of the
+        test until the hang disappeared), not guessed at — the fix was
+        to stop redundantly resetting the theme in `tearDown` (the
+        single-test file doesn't need cross-test cleanup for a
+        process-wide singleton anyway).
+      - **Performance**: `RepaintBoundary` around the board's
+        `CustomPaint` (isolates the ~static board texture from piece/
+        splash/hint animation repaints) and around each `PieceWidget`
+        (isolates one piece's shake/scale from its neighbors) — real
+        code-level changes, but actual FPS on a device could not be
+        profiled in this sandbox (no display, no Android device).
+      - **App icon + splash**: generated for real, not placeholders —
+        `assets/icon/app_icon.png`/`splash_logo.png`, drawn with Python/
+        Pillow (huanghuali-brown rounded square, jade-white disc, gold
+        brass rim) with a genuine 象 glyph from a Noto Serif SC subset
+        font fetched live from Google Fonts (no CJK font was available
+        locally to render it otherwise). Wired through
+        `flutter_launcher_icons` (Android + web icons) and
+        `flutter_native_splash` (Android + web splash screens), both of
+        which ran and regenerated the actual platform asset files —
+        verify the result in `android/app/src/main/res/mipmap-*/` and
+        `web/icons/`.
+      - **Web portrait frame**: `web/index.html` gets a `@media
+        (min-width: 481px)` rule constraining `<body>` to max-width
+        480px, centered, with a rice-paper-toned gradient behind it —
+        relies on Flutter web's documented behavior of filling its
+        nearest positioned ancestor (here, `<body>`) at 100%, but
+        **not visually verified**: this sandbox has no browser/display
+        to check it in.
+      - `flutter analyze` clean, `flutter test` (42/42 pass),
+        `flutter build web --release` succeeds
 
 ## Notes
 

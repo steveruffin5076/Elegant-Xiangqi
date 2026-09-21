@@ -4,12 +4,13 @@ import 'package:hive_flutter/hive_flutter.dart';
 
 import 'game/campaign_progress.dart';
 import 'screens/game_screen.dart';
-import 'theme/colors.dart';
+import 'theme/theme_controller.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Hive.initFlutter();
   await CampaignProgress.init();
+  await themeController.loadSaved();
   SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,
     DeviceOrientation.portraitDown,
@@ -22,19 +23,25 @@ class ElegantXiangqiApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Elegant Xiangqi',
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        useMaterial3: true,
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: AppColors.huanghuali,
-          primary: AppColors.huanghuali,
-          secondary: AppColors.gold,
-        ),
-        scaffoldBackgroundColor: AppColors.jadeWhite,
-      ),
-      home: const GameScreen(),
+    return AnimatedBuilder(
+      animation: themeController,
+      builder: (context, _) {
+        final palette = themeController.palette;
+        return MaterialApp(
+          title: 'Elegant Xiangqi',
+          debugShowCheckedModeBanner: false,
+          theme: ThemeData(
+            useMaterial3: true,
+            colorScheme: ColorScheme.fromSeed(
+              seedColor: palette.appBarBackground,
+              primary: palette.appBarBackground,
+              secondary: palette.pieceRim,
+            ),
+            scaffoldBackgroundColor: palette.scaffoldBackground,
+          ),
+          home: const GameScreen(),
+        );
+      },
     );
   }
 }

@@ -4,6 +4,7 @@ import '../theme/colors.dart';
 import 'campaign_map_screen.dart';
 import 'difficulty_select_screen.dart';
 import 'game_screen.dart';
+import 'settings_screen.dart';
 
 /// Minimal mode-select menu, reached from the in-game "菜单" (Menu)
 /// button. Full main-menu art direction is Phase 4 polish; this just
@@ -58,6 +59,13 @@ class HomeScreen extends StatelessWidget {
                     MaterialPageRoute(
                       builder: (_) => const CampaignMapScreen(),
                     ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                _MenuButton(
+                  label: '主题  Theme',
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const SettingsScreen()),
                   ),
                 ),
               ],

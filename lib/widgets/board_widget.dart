@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../game/board.dart';
-import '../theme/colors.dart';
+import '../theme/palette.dart';
 import 'ink_splash.dart';
 import 'piece_widget.dart';
 import 'pulsing_dot.dart';
@@ -20,6 +20,7 @@ class BoardWidget extends StatelessWidget {
   final ValueChanged<BoardPosition> onTapSquare;
   final BoardPosition? hintFrom;
   final BoardPosition? hintTo;
+  final Palette palette;
 
   const BoardWidget({
     super.key,
@@ -32,6 +33,7 @@ class BoardWidget extends StatelessWidget {
     required this.activeSplashes,
     required this.onSplashComplete,
     required this.onTapSquare,
+    required this.palette,
     this.hintFrom,
     this.hintTo,
   });
@@ -61,12 +63,17 @@ class BoardWidget extends StatelessWidget {
             onTapUp: handleTap,
             child: Stack(
               children: [
-                CustomPaint(
-                  size: Size(width, height),
-                  painter: _BoardPainter(
-                    selected: selected,
-                    legalDestinations: legalDestinations,
-                    blockedLegs: blockedLegs,
+                // Isolated so piece/splash/hint animations above it don't
+                // force the (comparatively expensive) board repaint.
+                RepaintBoundary(
+                  child: CustomPaint(
+                    size: Size(width, height),
+                    painter: _BoardPainter(
+                      selected: selected,
+                      legalDestinations: legalDestinations,
+                      blockedLegs: blockedLegs,
+                      palette: palette,
+                    ),
                   ),
                 ),
                 for (final visualPiece in pieces)
@@ -78,12 +85,15 @@ class BoardWidget extends StatelessWidget {
                     top: visualPiece.position.row * cellHeight + cellHeight * 0.05,
                     width: cellWidth * 0.9,
                     height: cellHeight * 0.9,
-                    child: PieceWidget(
-                      piece: visualPiece.piece,
-                      selected: selected == visualPiece.position,
-                      shakeSeed: shakingPieceId == visualPiece.id
-                          ? shakeSeed
-                          : 0,
+                    child: RepaintBoundary(
+                      child: PieceWidget(
+                        piece: visualPiece.piece,
+                        selected: selected == visualPiece.position,
+                        shakeSeed: shakingPieceId == visualPiece.id
+                            ? shakeSeed
+                            : 0,
+                        palette: palette,
+                      ),
                     ),
                   ),
                 for (final entry in activeSplashes.entries)
@@ -119,11 +129,13 @@ class _BoardPainter extends CustomPainter {
   final BoardPosition? selected;
   final List<BoardPosition> legalDestinations;
   final List<BoardPosition> blockedLegs;
+  final Palette palette;
 
   _BoardPainter({
     required this.selected,
     required this.legalDestinations,
     required this.blockedLegs,
+    required this.palette,
   });
 
   @override
@@ -132,19 +144,19 @@ class _BoardPainter extends CustomPainter {
     final cellHeight = size.height / Board.rows;
     final rect = Offset.zero & size;
 
-    // Huanghuali wood: warm gradient standing in for a scanned PBR texture.
+    // Board surface: warm gradient standing in for a scanned PBR texture.
     canvas.drawRect(
       rect,
       Paint()
-        ..shader = const LinearGradient(
+        ..shader = LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [Color(0xFF9C6A38), AppColors.huanghuali, Color(0xFF7A4B20)],
+          colors: palette.boardGradient,
         ).createShader(rect),
     );
 
     final linePaint = Paint()
-      ..color = AppColors.gold
+      ..color = palette.gridLines
       ..strokeWidth = 1.5
       ..style = PaintingStyle.stroke;
 
@@ -173,9 +185,9 @@ class _BoardPainter extends CustomPainter {
       Paint()
         ..shader = LinearGradient(
           colors: [
-            AppColors.jadeWhite.withValues(alpha: 0.55),
-            AppColors.celadon.withValues(alpha: 0.35),
-            AppColors.jadeWhite.withValues(alpha: 0.55),
+            palette.riverStart.withValues(alpha: 0.55),
+            palette.riverMid.withValues(alpha: 0.4),
+            palette.riverStart.withValues(alpha: 0.55),
           ],
         ).createShader(riverRect),
     );
@@ -183,7 +195,7 @@ class _BoardPainter extends CustomPainter {
       text: TextSpan(
         text: '楚 河          汉 界',
         style: GoogleFonts.notoSerifSc(
-          color: AppColors.gold,
+          color: palette.gridLines,
           fontSize: 20,
           fontWeight: FontWeight.bold,
         ),
@@ -210,7 +222,7 @@ class _BoardPainter extends CustomPainter {
         center,
         cellWidth * 0.42,
         Paint()
-          ..color = AppColors.gold
+          ..color = palette.selectionRing
           ..style = PaintingStyle.stroke
           ..strokeWidth = 2.5,
       );
@@ -223,7 +235,7 @@ class _BoardPainter extends CustomPainter {
       canvas.drawCircle(
         center,
         cellWidth * 0.12,
-        Paint()..color = AppColors.obsidianBlack.withValues(alpha: 0.4),
+        Paint()..color = palette.legalDot.withValues(alpha: 0.5),
       );
     }
 
@@ -243,9 +255,9 @@ class _BoardPainter extends CustomPainter {
     final top = topRow * cellHeight + cellHeight / 2;
     final bottom = (topRow + 2) * cellHeight + cellHeight / 2;
 
-    // Soft gold-leaf glow pass beneath the crisp diagonal lines.
+    // Soft glow pass beneath the crisp diagonal lines.
     final glowPaint = Paint()
-      ..color = AppColors.gold.withValues(alpha: 0.35)
+      ..color = palette.palaceGlow.withValues(alpha: 0.35)
       ..strokeWidth = 5
       ..style = PaintingStyle.stroke
       ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4);
@@ -253,7 +265,7 @@ class _BoardPainter extends CustomPainter {
     canvas.drawLine(Offset(right, top), Offset(left, bottom), glowPaint);
 
     final linePaint = Paint()
-      ..color = AppColors.gold
+      ..color = palette.gridLines
       ..strokeWidth = 1.5
       ..style = PaintingStyle.stroke;
     canvas.drawLine(Offset(left, top), Offset(right, bottom), linePaint);
@@ -272,7 +284,7 @@ class _BoardPainter extends CustomPainter {
     );
     final half = cellWidth * 0.2;
     final paint = Paint()
-      ..color = AppColors.imperialRed
+      ..color = palette.blockedX
       ..strokeWidth = 3
       ..strokeCap = StrokeCap.round;
     canvas.drawLine(
@@ -291,5 +303,6 @@ class _BoardPainter extends CustomPainter {
   bool shouldRepaint(covariant _BoardPainter oldDelegate) =>
       oldDelegate.selected != selected ||
       oldDelegate.legalDestinations != legalDestinations ||
-      oldDelegate.blockedLegs != blockedLegs;
+      oldDelegate.blockedLegs != blockedLegs ||
+      oldDelegate.palette != palette;
 }
