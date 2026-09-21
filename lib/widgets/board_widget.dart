@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../game/board.dart';
+import '../theme/motion.dart';
 import '../theme/palette.dart';
 import 'ink_splash.dart';
 import 'piece_widget.dart';
@@ -99,7 +100,7 @@ class BoardWidget extends StatelessWidget {
                     child: IgnorePointer(
                       child: TweenAnimationBuilder<double>(
                         tween: Tween(begin: 1.0, end: 0.0),
-                        duration: const Duration(milliseconds: 220),
+                        duration: pieceMoveDuration,
                         curve: Curves.easeIn,
                         onEnd: () => onGhostFadeComplete?.call(ghost.id),
                         builder: (context, t, child) => Opacity(
@@ -116,7 +117,7 @@ class BoardWidget extends StatelessWidget {
                 for (final visualPiece in pieces)
                   AnimatedPositioned(
                     key: ValueKey(visualPiece.id),
-                    duration: const Duration(milliseconds: 220),
+                    duration: pieceMoveDuration,
                     curve: Curves.easeOutCubic,
                     left: visualPiece.position.col * cellWidth + cellWidth * 0.05,
                     top: visualPiece.position.row * cellHeight + cellHeight * 0.05,

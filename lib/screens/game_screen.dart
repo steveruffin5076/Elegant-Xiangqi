@@ -8,6 +8,7 @@ import '../game/campaign_progress.dart';
 import '../game/difficulty.dart';
 import '../game/piece.dart';
 import '../game/rules.dart';
+import '../theme/motion.dart';
 import '../theme/palette.dart';
 import '../theme/theme_controller.dart';
 import '../widgets/board_widget.dart';
@@ -275,16 +276,15 @@ class _GameScreenState extends State<GameScreen> {
 
       movingVisual.position = move.to;
 
-      if (board.isGameOver) {
-        statusMessage = moverSide == Side.red ? '红方胜！' : '黑方胜！';
-      } else if (board.isInCheck(board.turn)) {
-        statusMessage = '将军!';
-      } else {
-        statusMessage = null;
-      }
+      // The win/loss message now shows in the centered popup dialog
+      // (GameResultDialog / CampaignResultDialog) instead of duplicating
+      // it here.
+      statusMessage = (!board.isGameOver && board.isInCheck(board.turn))
+          ? '将军!'
+          : null;
     });
 
-    Future<void>.delayed(const Duration(milliseconds: 220), () {
+    Future<void>.delayed(pieceMoveDuration, () {
       if (!mounted) return;
       if (movingPieceId == movingVisual.id) {
         setState(() => movingPieceId = null);
